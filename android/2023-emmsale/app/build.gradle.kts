@@ -1,3 +1,4 @@
+/* ktlint-disable */
 plugins {
     id("org.jetbrains.kotlin.android")
     id("com.android.application") version "8.0.2"
