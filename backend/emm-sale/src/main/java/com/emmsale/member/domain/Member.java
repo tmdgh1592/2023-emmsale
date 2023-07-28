@@ -18,9 +18,21 @@ public class Member extends BaseEntity {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
-
+  @Column(unique = true, nullable = false)
+  private Long githubId;
   @Column(nullable = false)
   private String name;
+  @Column
+  private String description;
+  @Column
+  private String openProfileUrl;
+  @Column(nullable = false)
+  private String imageUrl;
+
+  public Member(final Long githubId, final String name) {
+    this.githubId = githubId;
+    this.name = name;
+  }
 
   public void updateName(final String name) {
     this.name = name;
