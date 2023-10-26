@@ -1,111 +1,63 @@
 package com.emmsale.notification.application;
 
-import static com.emmsale.member.exception.MemberExceptionType.NOT_FOUND_MEMBER;
-import static com.emmsale.notification.exception.NotificationExceptionType.BAD_REQUEST_MEMBER_ID;
-import static com.emmsale.notification.exception.NotificationExceptionType.NOT_FOUND_NOTIFICATION;
+import static com.emmsale.member.exception.MemberExceptionType.NOT_MATCHING_TOKEN_AND_LOGIN_MEMBER;
+import static com.emmsale.notification.exception.NotificationExceptionType.*;
 
 import com.emmsale.member.domain.Member;
-import com.emmsale.member.domain.MemberRepository;
 import com.emmsale.member.exception.MemberException;
-import com.emmsale.notification.application.dto.FcmTokenRequest;
-import com.emmsale.notification.application.dto.NotificationModifyRequest;
-import com.emmsale.notification.application.dto.NotificationRequest;
-import com.emmsale.notification.application.dto.NotificationResponse;
-import com.emmsale.notification.domain.FcmToken;
-import com.emmsale.notification.domain.FcmTokenRepository;
+import com.emmsale.notification.application.dto.NotificationDeleteRequest;
 import com.emmsale.notification.domain.Notification;
 import com.emmsale.notification.domain.NotificationRepository;
 import com.emmsale.notification.exception.NotificationException;
+import com.emmsale.notification.exception.NotificationExceptionType;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-@Service
-@Transactional
 @RequiredArgsConstructor
+@Transactional
+@Service
 public class NotificationCommandService {
 
   private final NotificationRepository notificationRepository;
-  private final FcmTokenRepository fcmTokenRepository;
-  private final MemberRepository memberRepository;
-  private final FirebaseCloudMessageClient firebaseCloudMessageClient;
 
-  public NotificationResponse create(final NotificationRequest notificationRequest) {
-    final Long senderId = notificationRequest.getSenderId();
-    final Long receiverId = notificationRequest.getReceiverId();
-
-    final List<Long> memberIds = List.of(senderId, receiverId);
-
-    if (isNotExistedSenderOrReceiver(memberIds)) {
-      throw new NotificationException(BAD_REQUEST_MEMBER_ID);
-    }
-
-    validateExistedSenderOrReceiver(memberIds);
-
-    final Notification savedNotification = notificationRepository.save(
-        new Notification(
-            senderId,
-            receiverId,
-            notificationRequest.getEventId(),
-            notificationRequest.getMessage()
-        ));
-
-    firebaseCloudMessageClient.sendMessageTo(receiverId, savedNotification);
-
-    return NotificationResponse.from(savedNotification);
-  }
-
-  private void validateExistedSenderOrReceiver(final List<Long> memberIds) {
-    if (isNotExistedSenderOrReceiver(memberIds)) {
-      throw new NotificationException(BAD_REQUEST_MEMBER_ID);
-    }
-  }
-
-  private boolean isNotExistedSenderOrReceiver(final List<Long> memberIds) {
-    return memberIds.size() != memberRepository.countMembersById(memberIds);
-  }
-
-  public void registerFcmToken(final FcmTokenRequest fcmTokenRequest) {
-    final Long memberId = fcmTokenRequest.getMemberId();
-    final String token = fcmTokenRequest.getToken();
-
-    validateExistedMember(memberId);
-
-    fcmTokenRepository.findByMemberId(memberId)
-        .ifPresentOrElse(
-            it -> it.update(token),
-            () -> fcmTokenRepository.save(new FcmToken(token, memberId))
-        );
-  }
-
-  private void validateExistedMember(final Long memberId) {
-    if (isNotExisted(memberId)) {
-      throw new MemberException(NOT_FOUND_MEMBER);
-    }
-  }
-
-  private boolean isNotExisted(final Long memberId) {
-    return !memberRepository.existsById(memberId);
-  }
-
-  public void modify(
-      final NotificationModifyRequest notificationModifyRequest,
-      final Long notificationId
-  ) {
-    final Notification savedNotification = notificationRepository.findById(notificationId)
+  public void read(final Member member, final Long notificationId) {
+    final Notification notification = notificationRepository.findById(notificationId)
         .orElseThrow(() -> new NotificationException(NOT_FOUND_NOTIFICATION));
 
-    savedNotification.modifyStatus(notificationModifyRequest.getUpdatedStatus());
+    validateSameMember(member, notification.getReceiverId());
+
+    notification.read();
   }
 
-  public List<NotificationResponse> findAllNotifications(final Member member) {
-    final List<Notification> notifications = notificationRepository.findAllByReceiverId(
-        member.getId());
+  private void validateSameMember(final Member member, final Long loginMemberId) {
+    if (member.isNotMe(loginMemberId)) {
+      throw new MemberException(NOT_MATCHING_TOKEN_AND_LOGIN_MEMBER);
+    }
+  }
 
-    return notifications.stream()
-        .map(NotificationResponse::from)
+  public void deleteBatch(
+      final Member member,
+      final NotificationDeleteRequest notificationDeleteRequest
+  ) {
+    final List<Long> deleteIds = notificationDeleteRequest.getDeleteIds();
+
+    final List<Long> deleteIdsOwnMember = notificationRepository.findAllByIdIn(deleteIds)
+        .stream()
+        .filter(it -> it.isOwner(member.getId()))
+        .map(Notification::getId)
         .collect(Collectors.toList());
+
+    if (hasNoNotificationToDeleteBy(deleteIdsOwnMember)) {
+      return;
+    }
+
+    notificationRepository.deleteBatchByIdsIn(deleteIdsOwnMember);
+  }
+
+  private boolean hasNoNotificationToDeleteBy(final List<Long> deleteIds) {
+    return deleteIds.isEmpty();
   }
 }

@@ -1,7 +1,9 @@
 package com.emmsale.event.application.dto;
 
 import com.emmsale.event.domain.Event;
+import com.emmsale.event.domain.EventMode;
 import com.emmsale.event.domain.EventType;
+import com.emmsale.event.domain.PaymentType;
 import com.emmsale.tag.application.dto.TagRequest;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -10,13 +12,15 @@ import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import org.springframework.format.annotation.DateTimeFormat;
 
 @RequiredArgsConstructor
 @Getter
+@Setter
 public class EventDetailRequest {
 
-  private static final String DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
+  private static final String DATE_TIME_FORMAT = "yyyy:MM:dd:HH:mm:ss";
 
   @NotBlank(message = "행사의 이름을 입력해 주세요.")
   private final String name;
@@ -33,10 +37,18 @@ public class EventDetailRequest {
   @NotNull(message = "행사의 종료 일시를 입력해 주세요.")
   private final LocalDateTime endDateTime;
 
-  private final List<TagRequest> tags;
+  @DateTimeFormat(pattern = DATE_TIME_FORMAT)
+  private final LocalDateTime applyStartDateTime;
+  @DateTimeFormat(pattern = DATE_TIME_FORMAT)
+  private final LocalDateTime applyEndDateTime;
 
-  private final String imageUrl;
+  private final List<TagRequest> tags;
   private final EventType type;
+
+  private final EventMode eventMode;
+  private final PaymentType paymentType;
+
+  private final String organization;
 
   public Event toEvent() {
     return new Event(
@@ -44,9 +56,13 @@ public class EventDetailRequest {
         location,
         startDateTime,
         endDateTime,
+        applyStartDateTime,
+        applyEndDateTime,
         informationUrl,
         type,
-        imageUrl
+        paymentType,
+        eventMode,
+        organization
     );
   }
 }

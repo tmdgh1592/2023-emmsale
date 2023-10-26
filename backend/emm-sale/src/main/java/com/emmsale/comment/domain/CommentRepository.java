@@ -7,8 +7,15 @@ import org.springframework.data.repository.query.Param;
 
 public interface CommentRepository extends JpaRepository<Comment, Long> {
 
-  @Query("select c From Comment c inner join Event e on c.event.id = e.id where e.id = :eventId")
-  List<Comment> findByEventId(@Param("eventId") final Long eventId);
+  @Query("select c From Comment c inner join Feed f on c.feed.id = f.id where f.id = :feedId")
+  List<Comment> findByFeedId(@Param("feedId") final Long feedId);
 
-  List<Comment> findByParentId(Long parentId);
+  @Query("select c1 From Comment c1 "
+      + "left outer join fetch c1.parent p "
+      + "join fetch c1.member "
+      + "where c1.id=:id or p.id=:id")
+  List<Comment> findParentAndChildrenByParentId(@Param("id") final Long commentId);
+
+  @Query("select c From Comment c join fetch c.member m where m.id = :memberId")
+  List<Comment> findByMemberId(@Param("memberId") final Long memberId);
 }

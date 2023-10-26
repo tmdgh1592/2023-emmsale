@@ -3,6 +3,7 @@ package com.emmsale.member.domain;
 import com.emmsale.base.BaseEntity;
 import com.emmsale.member.exception.MemberException;
 import com.emmsale.member.exception.MemberExceptionType;
+import java.util.Optional;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
@@ -17,6 +18,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Member extends BaseEntity {
 
+  private static final String GITHUB_PROFILE_DOMAIN = "https://avatars.githubusercontent.com";
   private static final int MAX_DESCRIPTION_LENGTH = 100;
   private static final String DEFAULT_DESCRIPTION = "";
 
@@ -29,22 +31,28 @@ public class Member extends BaseEntity {
   @Column(nullable = false)
   private String description;
   @Column
+  @Getter(value = AccessLevel.PRIVATE)
   private String openProfileUrl;
   @Column(nullable = false)
   private String imageUrl;
+  @Column(nullable = false)
+  private String githubUsername;
 
-  public Member(final Long id, final Long githubId, final String imageUrl, final String name) {
+  public Member(final Long id, final Long githubId, final String imageUrl, final String name,
+      final String githubUsername) {
     this.id = id;
     this.githubId = githubId;
     this.imageUrl = imageUrl;
     this.name = name;
     this.description = DEFAULT_DESCRIPTION;
+    this.githubUsername = githubUsername;
   }
 
-  public Member(final Long githubId, final String imageUrl) {
+  public Member(final Long githubId, final String imageUrl, final String githubUsername) {
     this.githubId = githubId;
     this.imageUrl = imageUrl;
     this.description = DEFAULT_DESCRIPTION;
+    this.githubUsername = githubUsername;
   }
 
   public void updateName(final String name) {
@@ -65,6 +73,10 @@ public class Member extends BaseEntity {
     this.description = description;
   }
 
+  public void updateProfile(final String imageUrl) {
+    this.imageUrl = imageUrl;
+  }
+
   private void validateDescriptionNull(final String description) {
     if (description == null) {
       throw new MemberException(MemberExceptionType.NULL_DESCRIPTION);
@@ -77,12 +89,16 @@ public class Member extends BaseEntity {
     }
   }
 
-  public boolean isNotMe(final Member member) {
-    return isNotMe(member.getId());
+  public boolean isMe(final Member member) {
+    return isMe(member.getId());
   }
 
-  public boolean isMe(final Member member) {
-    return this.id.equals(member.id);
+  public boolean isMe(final Long id) {
+    return this.id.equals((id));
+  }
+
+  public boolean isNotMe(final Member member) {
+    return isNotMe(member.getId());
   }
 
   public boolean isNotMe(final Long id) {
@@ -91,5 +107,13 @@ public class Member extends BaseEntity {
 
   public boolean isOnboarded() {
     return name != null;
+  }
+
+  public boolean isNotGithubProfile() {
+    return !imageUrl.startsWith(GITHUB_PROFILE_DOMAIN);
+  }
+
+  public Optional<String> getOptionalOpenProfileUrl() {
+    return Optional.ofNullable(openProfileUrl);
   }
 }

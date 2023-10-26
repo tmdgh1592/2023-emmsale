@@ -1,6 +1,6 @@
 package com.emmsale.notification.domain;
 
-import com.emmsale.base.BaseEntity;
+import java.time.LocalDateTime;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
@@ -15,36 +15,48 @@ import lombok.NoArgsConstructor;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Notification extends BaseEntity {
+public class Notification {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
-  @Column(nullable = false)
-  private Long senderId;
+
+  @Enumerated(EnumType.STRING)
+  @Column(name = "type", nullable = false)
+  private NotificationType type;
+
   @Column(nullable = false)
   private Long receiverId;
+
   @Column(nullable = false)
-  private Long eventId;
+  private Long redirectId;
+
   @Column(nullable = false)
-  private String message;
-  @Enumerated(EnumType.STRING)
-  private NotificationStatus status;
+  private LocalDateTime createdAt;
+
+  @Column(columnDefinition = "MEDIUMTEXT")
+  private String jsonData;
+
+  private boolean isRead;
 
   public Notification(
-      final Long senderId,
-      final Long receiverId,
-      final Long eventId,
-      final String message
+      final NotificationType type, final Long receiverId,
+      final Long redirectId, final LocalDateTime createdAt,
+      final String jsonData
   ) {
-    this.senderId = senderId;
+    this.type = type;
     this.receiverId = receiverId;
-    this.eventId = eventId;
-    this.message = message;
-    this.status = NotificationStatus.IN_PROGRESS;
+    this.redirectId = redirectId;
+    this.createdAt = createdAt;
+    this.jsonData = jsonData;
+    this.isRead = false;
   }
 
-  public void modifyStatus(final NotificationStatus status) {
-    this.status = status;
+  public boolean isOwner(final Long memberId) {
+    return receiverId.equals(memberId);
+  }
+
+  public void read() {
+    isRead = true;
   }
 }
