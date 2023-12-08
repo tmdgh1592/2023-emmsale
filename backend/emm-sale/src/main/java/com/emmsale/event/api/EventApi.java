@@ -1,12 +1,13 @@
 package com.emmsale.event.api;
 
-import com.emmsale.event.application.EventService;
+import com.emmsale.event.application.EventCommandService;
+import com.emmsale.event.application.EventQueryService;
 import com.emmsale.event.application.dto.EventDetailRequest;
-import com.emmsale.event.application.dto.EventDetailResponse;
 import com.emmsale.event.application.dto.EventResponse;
 import com.emmsale.event.domain.EventStatus;
 import com.emmsale.event.domain.EventType;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import javax.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -30,44 +31,46 @@ import org.springframework.web.multipart.MultipartFile;
 @RequiredArgsConstructor
 public class EventApi {
 
-  private final EventService eventService;
+  private final EventQueryService eventQueryService;
+  private final EventCommandService eventCommandService;
 
   @GetMapping("/{id}")
-  public ResponseEntity<EventDetailResponse> findEventById(@PathVariable final Long id) {
-    return ResponseEntity.ok(eventService.findEvent(id, LocalDate.now()));
+  public ResponseEntity<EventResponse> findEventById(@PathVariable final Long id) {
+    return ResponseEntity.ok(eventQueryService.findEvent(id, LocalDate.now()));
   }
 
   @GetMapping
   public ResponseEntity<List<EventResponse>> findEvents(
-      @RequestParam final EventType category,
+      @RequestParam(required = false) final EventType category,
       @RequestParam(name = "start_date", required = false) final String startDate,
       @RequestParam(name = "end_date", required = false) final String endDate,
       @RequestParam(required = false) final List<String> tags,
       @RequestParam(required = false) final List<EventStatus> statuses,
       @RequestParam(required = false) final String keyword) {
     return ResponseEntity.ok(
-        eventService.findEvents(category, LocalDate.now(), startDate, endDate, tags, statuses,
+        eventQueryService.findEvents(category, LocalDateTime.now(), startDate, endDate, tags,
+            statuses,
             keyword));
   }
 
   @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   @ResponseStatus(HttpStatus.CREATED)
-  public EventDetailResponse addEvent(@RequestPart @Valid final EventDetailRequest request,
+  public EventResponse addEvent(@RequestPart @Valid final EventDetailRequest request,
       @RequestPart final List<MultipartFile> images) {
-    return eventService.addEvent(request, images);
+    return eventCommandService.addEvent(request, images);
   }
 
   @PutMapping(path = "/{eventId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   @ResponseStatus(HttpStatus.OK)
-  public EventDetailResponse updateEvent(@PathVariable final Long eventId,
+  public EventResponse updateEvent(@PathVariable final Long eventId,
       @RequestPart @Valid final EventDetailRequest request,
       @RequestPart final List<MultipartFile> images) {
-    return eventService.updateEvent(eventId, request, images);
+    return eventCommandService.updateEvent(eventId, request, images);
   }
 
   @DeleteMapping("/{eventId}")
   @ResponseStatus(HttpStatus.NO_CONTENT)
   public void deleteEvent(@PathVariable final Long eventId) {
-    eventService.deleteEvent(eventId);
+    eventCommandService.deleteEvent(eventId);
   }
 }

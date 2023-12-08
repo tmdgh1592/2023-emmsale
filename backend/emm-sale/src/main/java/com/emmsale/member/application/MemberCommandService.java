@@ -2,7 +2,7 @@ package com.emmsale.member.application;
 
 import com.emmsale.image.application.S3Client;
 import com.emmsale.member.application.dto.DescriptionRequest;
-import com.emmsale.member.application.dto.OpenProfileUrlRequest;
+import com.emmsale.member.application.dto.MemberImageResponse;
 import com.emmsale.member.domain.Member;
 import com.emmsale.member.domain.MemberRepository;
 import com.emmsale.member.exception.MemberException;
@@ -16,21 +16,10 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 @Transactional
 @RequiredArgsConstructor
-public class MemberUpdateService {
+public class MemberCommandService {
 
   private final MemberRepository memberRepository;
   private final S3Client s3Client;
-
-  public void updateOpenProfileUrl(
-      final Member member,
-      final OpenProfileUrlRequest openProfileUrlRequest
-  ) {
-    final Member persistMember = memberRepository.findById(member.getId())
-        .orElseThrow(() -> new MemberException((MemberExceptionType.NOT_FOUND_MEMBER)));
-    final String openProfileUrl = openProfileUrlRequest.getOpenProfileUrl();
-
-    persistMember.updateOpenProfileUrl(openProfileUrl);
-  }
 
   public void updateDescription(final Member member, final DescriptionRequest descriptionRequest) {
     final String description = descriptionRequest.getDescription();
@@ -48,7 +37,7 @@ public class MemberUpdateService {
     memberRepository.deleteById(memberId);
   }
 
-  public String updateMemberProfile(
+  public MemberImageResponse updateMemberProfile(
       final MultipartFile image,
       final Long memberId,
       final Member member
@@ -66,6 +55,6 @@ public class MemberUpdateService {
     final String imageUrl = s3Client.convertImageUrl(imageName);
     member.updateProfile(imageUrl);
 
-    return imageUrl;
+    return new MemberImageResponse(imageUrl);
   }
 }
